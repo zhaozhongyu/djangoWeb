@@ -1,5 +1,6 @@
 # djangoWeb
 django 练手之作
+
 ## 第一部分
 #### 数据库的建立
 编辑mysite/settings.py
@@ -25,9 +26,9 @@ $ python manage.py migrate
 #### 创建模型
 > 项目和应用之间有什么不同？ 应用是一个Web应用程序，它完成具体的事项 —— 比如一个博客系统、一个存储公共档案的数据库或者一个简单的投票应用。 项目是一个特定网站中相关配置和应用的集合。一个项目可以包含多个应用。一个应用可以运用到多个项目中去。
 
-要创建应用程序, 键入`$ python manage.py startapp polls`, polls只是一个应用程序的示例, 它可以是名字.这将创建一个目录polls，它的结构如下
+要创建应用程序, 键入`$ python manage.py startapp library`, library只是一个应用程序的示例, 它可以是名字.这将创建一个目录library，它的结构如下
 ```python
-polls/
+library/
     __init__.py
     admin.py
     migrations/
@@ -36,3 +37,69 @@ polls/
     tests.py
     views.py
 ```
+编辑polls/models.py文件，并让它看起来像这样：
+```python
+from django.db import models
+
+# Create your models here.
+class Author(models.Model):
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=40)
+    email = models.EmailField()
+    intro = models.CharField(max_length=5000)
+
+    def __str__(self):
+        return self.first_name+" "+self.last_name
+
+class Publisher(models.Model):
+    name = models.CharField(max_length=200, primary_key=True)
+    address = models.CharField(max_length=50)
+    city = models.CharField(max_length=60)
+    country = models.CharField(max_length=50)
+    website = models.URLField()
+    group = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.name
+
+
+class Keyword(models.Model):
+    keyword = models.CharField(max_length=50, primary_key=True)
+
+class ClassifiedCode(models.Model):
+    code = models.CharField(max_length=50)
+
+class Callno(models.Model):
+    callno = models.CharField(max_length=50)
+
+class Book(models.Model):
+    ISBN = models.CharField(max_length=20, primary_key=True)
+    title = models.CharField(max_length=200)
+    intro = models.CharField(max_length=5000)
+    publish_date = models.DateTimeField('date published')
+    price = models.FloatField()
+    keyword = models.ManyToManyField(Keyword)
+    author = models.ManyToManyField(Author)
+    classifiedCode = models.ForeignKey(ClassifiedCode)
+    callno = models.ForeignKey(Callno)
+
+    def __str__(self):  
+        return self.title
+```
+上述代码非常直观。每个模型都用一个类表示，该类继承自django.db.models.Model。每个模型都有一些类变量，在模型中每个类变量都代表了数据库中的一个字段。
+
+每个字段通过Field类的一个实例表示 —— 例如字符字段CharField和日期字段DateTimeField。这种方法告诉Django，每个字段中保存着什么类型的数据。
+
+某些Field 类具有必选的参数。例如，CharField要求你给它一个max_length。
+
+现在,再次编辑mysite/settings.py文件，并修改INSTALLED_APPS设置以包含字符串`library`,让我们运行另外一个命令：
+```python
+$ python manage.py makemigrations library
+```
+通过运行makemigrations告诉Django，已经对模型做了一些更改（在这个例子中，你创建了一个新的模型）并且会将这些更改存储为迁移文件。
+
+现在，再次运行migrate以在你的数据库中创建模型所对应的表：
+```python
+$ python manage.py migrate
+```
+migrate命令会找出所有还没有被应用的迁移文件（Django使用数据库中一个叫做django_migrations的特殊表来追踪哪些迁移文件已经被应用过），并且在你的数据库上运行它们 —— 本质上来讲，就是使你的数据库模式和你改动后的模型进行同步。
