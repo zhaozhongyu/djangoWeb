@@ -76,7 +76,7 @@ class Book(models.Model):
     ISBN = models.CharField(max_length=20, primary_key=True)
     title = models.CharField(max_length=200)
     intro = models.CharField(max_length=5000)
-    publish_date = models.DateTimeField('date published')
+    publish_date = models.DateField('date published')
     price = models.FloatField()
     keyword = models.ManyToManyField(Keyword)
     author = models.ManyToManyField(Author)
