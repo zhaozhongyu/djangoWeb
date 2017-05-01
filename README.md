@@ -1,7 +1,7 @@
 # djangoWeb
 django 练手之作
 
-## 第一部分
+## 第一部分:模型
 #### 数据库的建立
 编辑mysite/settings.py
 > 默认数据库是sqlite, 练手之作就不修改了
