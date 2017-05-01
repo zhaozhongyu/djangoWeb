@@ -40,51 +40,43 @@ library/
 编辑polls/models.py文件，并让它看起来像这样：
 ```python
 from django.db import models
-
+from django.utils import timezone
 # Create your models here.
 class Author(models.Model):
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=40)
-    email = models.EmailField()
-    intro = models.CharField(max_length=5000)
-
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(null=True)
+    intro = models.CharField(max_length=5000, null=True)
     def __str__(self):
-        return self.first_name+" "+self.last_name
+        return self.first_name + " "+ self.last_name
 
 class Publisher(models.Model):
-    name = models.CharField(max_length=200, primary_key=True)
-    address = models.CharField(max_length=50)
-    city = models.CharField(max_length=60)
-    country = models.CharField(max_length=50)
-    website = models.URLField()
-    group = models.CharField(max_length=200)
-
+    name = models.CharField(max_length=100)
+    group = models.CharField(max_length=100, null=True)
+    web = models.URLField(null=True)
     def __str__(self):
         return self.name
 
 
-class Keyword(models.Model):
-    keyword = models.CharField(max_length=50, primary_key=True)
-
-class ClassifiedCode(models.Model):
-    code = models.CharField(max_length=50)
-
-class Callno(models.Model):
-    callno = models.CharField(max_length=50)
-
 class Book(models.Model):
-    ISBN = models.CharField(max_length=20, primary_key=True)
-    title = models.CharField(max_length=200)
-    intro = models.CharField(max_length=5000)
-    publish_date = models.DateField('date published')
+    name = models.CharField(max_length=100)
     price = models.FloatField()
-    keyword = models.ManyToManyField(Keyword)
     author = models.ManyToManyField(Author)
-    classifiedCode = models.ForeignKey(ClassifiedCode)
-    callno = models.ForeignKey(Callno)
+    publisher = models.ForeignKey(Publisher)
+    def __str__(self):
+        return self.name
 
-    def __str__(self):  
-        return self.title
+class User(models.Model):
+    name = models.CharField(max_length=100)
+    books = models.ManyToManyField(Book, through='Bollow')
+    def __str__(self):
+        return self.name
+
+
+class Bollow(models.Model):
+    user = models.ForeignKey(User)
+    book = models.ForeignKey(Book)
+    bollow_date = models.DateField(default=timezone.now)
 ```
 上述代码非常直观。每个模型都用一个类表示，该类继承自django.db.models.Model。每个模型都有一些类变量，在模型中每个类变量都代表了数据库中的一个字段。
 
