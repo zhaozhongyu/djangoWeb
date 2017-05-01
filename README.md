@@ -37,7 +37,7 @@ library/
     tests.py
     views.py
 ```
-编辑polls/models.py文件，并让它看起来像这样：
+编辑library/models.py文件，并让它看起来像这样：
 ```python
 from django.db import models
 from django.utils import timezone
