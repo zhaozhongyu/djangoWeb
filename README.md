@@ -68,7 +68,8 @@ class Book(models.Model):
 
 class User(models.Model):
     name = models.CharField(max_length=100)
-    books = models.ManyToManyField(Book, through='Bollow')
+    password = models.CharField(max_length=100)
+    books = models.ManyToManyField(Book, through='Bollow')
     def __str__(self):
         return self.name
 
@@ -148,7 +149,7 @@ migrate命令会找出所有还没有被应用的迁移文件（Django使用数�
 <QuerySet [<Book: Django Web>, <Book: Python3>]>
 >>> Book.objects.all()
 <QuerySet [<Book: Django Web>, <Book: Python3>]>
->>> u = User(name='zhang san')
+>>> u = User(name='zhang san', password='zhangsan')
 >>> u.save()
 >>> u
 <User: zhang san>
@@ -190,3 +191,148 @@ Django的管理站点是默认启用的。 让我们启动开发服务器，然�
 $ python manage.py runserver 8000
 ```
 现在，打开一个浏览器访问你本地域名中的 “/admin/” —— 例如http://127.0.0.1:8000/admin/
+
+
+## 第三部分:视图和模板
+#### 原理
+
+视图是Django应用中的一“类”网页，它通常使用一个特定的函数提供服务，并且具有一个特定的模板。例如，在博客应用中，可能有以下视图：
+
+- 博客首页 —— 显示最新发表的博客。
+- 博客“详细”页面 —— 单篇博客的固定链接页面。
+- 基于年份的归档页面 —— 显示某给定年份里所有月份发表过的博客。
+- 基于月份的归档页面 —— 显示在给定月份中发表过博客的所有日期。
+- 基于日期的归档页面 —— 显示在给定日期中发表过的所有博客名称。
+- 评论 —— 对给定的博客发表评论
+
+在Django中，网页的页面和其他内容都是由视图来传递的（视图对WEB请求进行回应）。 每个视图都是由一个简单的Python函数(或者是基于类的视图的方法)表示的。Django通过检查请求的URL（准确地说，是URL里域名之后的那部分）来选择使用哪个视图。
+
+#### 编写你的第一个视图
+
+让我们来编写第一个视图。 打开library/views.py文件并将以下Python代码写入：
+```
+# library/views.py
+from django.shortcuts import render,render_to_response, get_list_or_404,get_object_or_404
+from .forms import BookName
+from .models import Book
+# Create your views here.
+
+def index(request):
+    if not request.method=="POST":
+        form = BookName() #创建forms.py中的form
+        context = {"form": form}
+        return render(request, 'library/index.html', context)
+    else:
+        form = BookName(request.POST) #使用这个方法来获得POST获取到的数据
+        if form.is_valid():
+            book_name = form.cleaned_data['book_name']
+            books = Book.objects.filter(name__contains=book_name) #name__contains的意思是name中包含, 类似于sql中的like %book_name%
+            context = {'books': books, 'book_name': book_name}
+        else:
+            context = {'error':form.errors}
+        return render(request, 'library/results.html', context)
+
+
+def detail(request, book_id):
+    book = get_object_or_404(Book, pk=book_id) #get_object_or_404是获取单个对象, 当获取对象有异常时抛出404错误
+    context = {'book':book}
+    return render_to_response('library/detail.html', context)
+```
+为了在应用内部使用django提供的form能力, 需要创建一个forms.py文件
+```python
+from django import forms
+
+class BookName(forms.Form):
+    book_name = forms.CharField(label='book name', max_length=100) #创建一个带label的textfield
+```
+
+为了在应用目录内部创建URLconf，需要创建一个urls.py文件。
+
+在library/urls.py文件中键入如下代码：
+```
+from django.conf.urls import url
+
+from . import views
+
+urlpatterns = [
+    # like library/
+    url(r'^$', views.index, name='index'),
+    # like library/2
+    url(r'^(?P<book_id>[0-9]+)/$', views.detail, name='detail')
+]
+```
+
+下一步，让主URLconf可以链接到library.urls模块。在mysite/urls.py中插入一个include()：
+```
+mysite/urls.py
+from django.conf.urls import include, url
+from django.contrib import admin
+
+urlpatterns = [
+    url(r'^library/', include('library.urls', namespace='library')),
+    url(r'^admin/', include(admin.site.urls)),
+]
+```
+
+#### 模板
+首先，在你的polls目录下创建一个叫做 templates的目录。Django将在这里查找模板。
+
+你项目的TEMPLATES设置描述了Django将如何加载并渲染模板。默认的设置文件settings.py配置了一个DjangoTemplates后端，其中将APP_DIRS选项设置为True。按照惯例，DjangoTemplates在 INSTALLED_APPS所包含的每个应用的目录下查找名为"templates"子目录。因此即使我们不像教程 2.中那样去修改DIRS,Django也可以找到应用的模版。
+
+##### 组织模板
+
+我们可以将我们所有的模板聚在一起，放在一个大的模板目录下，且可以运行地很好。然而，我们的这个模板属于library应用，不像我们在先前教程中创建的管理站点模板，为了可重用性考虑,我们将把它们放在应用的模板目录下（library/templates）而不是项目模板目录下（templates）。
+
+在你刚刚创建的templates目录中，创建另外一个目录library，并在其中创建一个文件index.html。换句话讲，你的模板应该位于 library/templates/library/index.html。
+```html
+<h1>Django Web</h1>
+<body>
+    <form method="post">
+        {% csrf_token %}
+        {{ form }}
+        <input type="submit" value="Submit" />
+    </form>
+</body>
+```
+detail.html
+```html
+<h1>{{ book.name }}</h1>
+```
+results.html
+```html
+<h1>{{ book_name }}</h1>
+<body>
+    {% for book in books %}
+        <li><a href="{% url 'library:detail' book.id %}">{{ book.name }}</a></li>
+    {% endfor %}
+</body>
+```
+以下分别解释下html中的各个设置.
+* `{% csrf_token %}`为django提供的防范csrf攻击的函数, 只需要在每个form中填入这一行即可
+* `{{ form }}`以这个格式表示的form为views函数中context字典设置的变量
+* `{% for book in books %}`和`{% endfor %}`共同组成了一个for循环, books为context字典设置的变量
+* `{% url 'library:detail' book.id %}`中的library为myweb/urls配置的namespace, detail为urls中配置的url, 这一行的意思就是获取到library:detail表示的url, 并将book.id作为参数传给它
+
+通过以上步骤, 我们已经完成了一个简易的图书搜索能力, 现在执行`python manage.py runserver`, 然后打开浏览器, 查看功能是否正常吧.
+
+## 第四部分:静态文件
+除了由服务器生成的HTML文件外，网页应用一般需要提供其它必要的文件 —— 比如图片文件、JavaScript脚本和CSS样式表 —— 来为用户呈现出一个完整的网站。 在Django中，我们将这些文件称为“静态文件”。
+
+#### 自定义你的应用的外观
+首先在你的library中创建一个static目录。Django将在那里查找静态文件，这与Django在library/templates/中寻找对应的模板文件的方式是一致的。
+
+在你刚刚创建的static目录中，创建另外一个目录library并在它下面创建一个文件style.css。换句话讲，你的样式表应该位于library/static/library/style.css。
+```
+li a {
+    color: green;
+}
+```
+下一步，在library/templates/library/results.html的顶端添加如下内容 ：
+```
+{% load staticfiles %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'library/style.css' %}" />
+```
+`{% load staticfiles %}` 从staticfiles模板库加载`{% static %}` 模板标签。`{% static %}`模板标签会生成静态文件的绝对URL
+
+### End
