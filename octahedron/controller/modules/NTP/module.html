@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form >
+<p>start time:<input name="starttime" id="starttime" type="text" value="5"></p>
+<p>duration: <input name="duration" id="duration" type="text" value="100"></p>
+    <input type="button" value="save config" onclick="saveconfig()"> <label id="resultlabel" hidden="hidden"></label>
+</form>
+<script src="../../js/jquery.min.js"></script>
+<script type="text/javascript">
+    function saveconfig() {
+        var starttime = $("#starttime").val()
+        var duration = $("#duration").val()
+        $.post(
+            url= parent.saveconfig(),
+            data={
+                "module":"NTP",
+                "starttime":starttime,
+                "duration":duration,
+            },
+            function (result, status) {
+
+                var label = $("#resultlabel");
+                if(result == 'Success'){
+                    label.html(result);
+                    label.css("color","black");
+                }else {
+                    label.html(result)
+                    label.css("color","red");
+                };
+                    label.removeAttr("hidden");
+                setTimeout("refresh()", 3000);
+            }
+        );
+    }
+    function refresh() {
+        self.location.reload();
+    }
+</script>
+</body>
+</html>
