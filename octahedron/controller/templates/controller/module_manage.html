@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        {% load static %}
+    <meta charset="UTF-8"><link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    <title>module_manage</title>
+    <style type="text/css">
+        #div {width:640px; min-height:480px;padding:10px;border:1px solid #aaaaaa;margin:auto;top:50%}
+    </style>
+</head>
+<body>
+<div id="div" align="center">
+    <form action="{% url 'controller:add_module_submit' %}" method="post">
+        {% csrf_token %}
+        <p>module name: <input type="text" name="module_name" id="module_name"></label><br /></p>
+        <p>isOnceonly:<input type="radio" name="isOnceonly" id="Onceonly_true" value="True" checked="checked">true
+            <input type="radio" name="isOnceonly" id="Onceonly_false" value="False">false <br /></p>
+        <p>description:<br/>
+            <textarea name="description" id="description"></textarea> <br /></p>
+        <input type="button" value="delete module" onclick="remove_module()"><input type="submit" value="submit">
+    </form>
+</div>
+<script src="{% static 'controller/js/jquery-3.2.1.min.js' %}"></script>
+<script type="text/javascript">
+        function remove_module() {
+        var module_name = $("#module_name").val();
+        $.post(url="{% url 'controller:remove_module' %}",
+            data={'module_name':module_name,
+            },
+            function(result, status){
+            }
+        );
+    }
+</script>
+</body>
+</html>
