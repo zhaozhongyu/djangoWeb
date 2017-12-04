@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- index页面应该直接就是可以快速开始任务的路径, 然后对于add host和add module有连接 -->
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    <title>Index Page</title>
+    <style type="text/css">
+        #div1 {width:198px; height:480px;overflow:auto; padding:10px;border:1px solid #aaaaaa; float: left}
+        #div2 { height:480px;overflow:auto;padding:10px;border:1px solid #aaaaaa; float: left; text-align: left}
+        #divlog {height: 240px;  padding:10px;border:1px solid #aaaaaa; text-align: left}
+        #logFrame {height: 200px; overflow:auto; padding:10px;border:1px solid #aaaaaa; background-color: #FFFFFF; text-align: left;
+            font:12px "Microsoft YaHei"; line-height:5px;}
+        #divButton {margin:0 auto;text-align:center;}
+        #div4 {overflow:hidden;}
+        #frame {width: 100%; min-height:480px;padding:10px;border:1px solid #aaaaaa;}
+        p[name='module'] {margin:3px 0 0 0;padding:0;text-indent:2em;}
+    </style>
+</head>
+<body>
+<div style="margin:0 auto;text-align: center;"><img src="{% static 'controller/images/base.jpg' %}" ></div>
+<div style="width:1000px;height:800px;border:1px solid #cccccc;margin:auto;background-color: #faf9f9;border-radius:8px" align="center">
+<!-- host -->
+<div id="div1">
+    <h2>Host</h2>
+    {% for host in hosts %}
+        <p><input type="checkbox" name="selecthost" value={{ host.host_ip }}> {{ host.host_ip }}</p>
+    {% endfor %}
+</div>
+<div id="div2">
+    <h2 align="center">modules</h2>
+    {% for module in modules %}
+        <p><input type="checkbox" name="selectmodule" onclick="changeIframe(this.value)" value="{{ module.module_name }}" > {{ module.module_name }}</p>
+    {% endfor %}
+</div>
+<div id="div4" ><iframe id="frame" src="{% static 'controller/modules/NTP/module.html' %}"></iframe></div>
+<input type="button" name="start_task" value="start task" id="start_task" onclick="starttask()" ><label id="taskresult" ></label>
+    <div id="divlog" >
+        <select id="select_host">
+            <option value="ALL" selected="selected">ALL</option>
+            {% for host in hosts %}
+                <option value="[{{ host.host_ip }}]">{{ host.host_ip }}</option>
+            {% endfor %}
+        </select>
+        <select id="select_module">
+             <option value="ALL" selected="selected">ALL</option>
+            {% for module in modules %}
+                <option value="[{{ module.module_name }}]">{{ module.module_name }}</option>
+            {% endfor %}
+        </select>
+        <select id="logLevel">
+            <option value="[DEBUG]" >DEBUG</option>
+            <option value="[INFO]" selected="selected">INFO</option>
+            <option value="[WARN]" >WARN</option>
+            <option value="[ERROR]" >ERROR</option>
+        </select>
+        <input type="button" id="changelog" value="changelog" onclick="changelog()">
+        <div id="logFrame"></div>
+    </div>
+</div>
+<div id="divButton">
+    <input type="button" name="host_manage" value="host manage" class="btn" onclick="location.href='{% url 'controller:host_manage' %}'" />
+    <input type="button" name="module_manage" value="module manage" class="btn" onclick="location.href='{% url 'controller:module_manage' %}'" />
+    <input type="button" name="FileEditor" value="online FileEditor" class="btn" onclick="location.href='{% url 'controller:FileEditor' %}'" />
+    <input type="button" name="HTMLEditor" value="online HTMLEditor" class="btn" onclick="location.href='{% url 'controller:HTMLEditor' %}'" />
+</div>
+<script src="../../static/controller/js/jquery-3.2.1.min.js"></script>
+<script type="text/javascript">
+    //格式为[level][host][module][time]log
+    function changelog() {
+        window.host = $("#select_host").val();
+        window.module= $("#select_module").val();
+        window.level = $("#logLevel").val();
+
+        $("#logFrame").children().each(function () {
+            txt = $(this).text()
+            if(window.host != "ALL" && ! txt.includes(window.host)){
+                    $(this).hide()
+                }
+                else if (window.module != "ALL" && ! txt.includes(window.module)){
+                    $(this).hide()
+                }
+                else if (! checkLevel(txt) ){
+                    $(this).hide()
+                }
+                else {
+                    $(this).show()
+                }
+
+        })
+    }
+    function checkLevel(data) {
+        if(window.level == "[ERROR]"){
+            if(data.includes("[ERROR]")){
+                return true;
+            }
+            return false;
+        }
+        else if(window.level == "[WARN]"){
+            if(data.includes("[ERROR]") || data.includes("[WARN]")){
+                return true;
+            }
+            return false;
+        }
+        else if(window.level == "[INFO]"){
+            if(! (data.includes("[ERROR]") || data.includes("[WARN]"))){
+                return true;
+            }
+            return false;
+        }
+        else{
+            return true;
+        }
+    }
+
+    function socket_log(task_id) {
+        window.socket = new WebSocket("ws://" + window.location.host + "/websocket_log/");
+        window.host = "ALL";
+        window.module= "ALL";
+        window.level = "[INFO]";
+        callback = "";
+        window.setInterval(function(){ //每隔5秒钟发送一次心跳，避免websocket连接因超时而自动断开
+            if(window.socket.readyState == 1){
+                window.socket.send("ping");
+            }
+        },5000);
+        //document.querySelector("#logFrame").scrollIntoView(true)
+        window.socket.onopen = function (e) {
+                //console.log('WebSocket open');//成功连接上Websocket
+            console.log(e)
+                $('#logFrame').append('<pre>[INFO][ALL][ALL]Web Socket open.</pre>');
+            window.socket.send(task_id);
+        };
+        window.socket.onmessage = function (e) {
+                console.log('message: ' + e.data);//打印服务端返回的数据
+                if(window.host != "ALL" && ! e.data.includes(window.host)){
+                    $('#logFrame').append('<pre style="display: none;">' + e.data + '</pre>');
+                }
+                else if (window.module != "ALL" && ! e.data.includes(window.module)){
+                    $('#logFrame').append('<pre style="display: none;">' + e.data + '</pre>');
+                }
+                else if (! checkLevel(e.data) ){
+                    $('#logFrame').append('<pre style="display: none;">' + e.data + '</pre>');
+                }
+                else {
+                    $('#logFrame').append('<pre>' + e.data + '</pre>');
+                }
+                $("#logFrame").scrollTop($("#logFrame")[0].scrollHeight);
+            };
+        window.socket.onerror = function (e) {
+            $('#logFrame').append('<pre>[ERROR][ALL][ALL]'+e.data + '</pre>');
+        }
+        window.socket.onclose= function () {
+            $('#logFrame').append('<pre>[INFO][ALL][ALL]Web Socket close.</pre>');
+        }
+    };
+    $(window).on("unload",function () {
+        socket.close();
+    })
+</script>
+<script type="text/javascript">
+    function changeIframe(module) {
+        $("#frame").attr("src", "../../static/controller/modules/"+module+"/module.html")
+    }
+    function starttask() {
+        var hosts = []
+        items = $("#div1").find("input")
+        items.each(function(){
+            if($(this).prop('checked')){
+                hosts.push($(this).val())
+            }
+        });
+        var modules = []
+        items = $("#div2").find("input")
+        items.each(function(){
+            if($(this).prop('checked')){
+                modules.push($(this).val());
+            }
+        });
+        $.post(url="{% url 'controller:start_task' %}",
+            data={'hosts':hosts,
+                'modules':modules,
+                },
+            function(result, status){
+                socket_log(result);
+            }
+        )
+    };
+    function saveconfig() {
+        return {% url 'controller:save_config' %};
+    }
+</script>
+</body>
+
+</html>
