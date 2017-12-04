@@ -16,7 +16,6 @@ from .operation.BatchExecute import BatchExecute
 from .operation.preExecute import preExecute
 import time
 from channels.message import Message
-from controller.operation.websocket import websocket
 
 @channel_session
 def ws_connect(message):
