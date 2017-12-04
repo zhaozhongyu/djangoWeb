@@ -5,7 +5,7 @@ from django.template import RequestContext
 from django.views.decorators.csrf import csrf_exempt
 import re, os, sys, zipfile, time
 
-from controller.operation import ssh_execute,BatchExecute, preExecute, websocket
+from controller.operation import ssh_execute,BatchExecute, preExecute
 # Create your views here.
 from django.views.decorators.http import require_POST,require_GET
 
